@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  celery-worker:
+    build: .
+    container_name: ai-micro-celery-worker
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@host.docker.internal:5432/admindb
+
+      # Celery
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/2
+
+      # Ollama (Embedding生成用)
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - EMBEDDING_MODEL=bge-m3:567m
+
+      # Environment
+      - PYTHONPATH=/app
+    volumes:
+      # ai-micro-api-admin のコードを共有
+      - ../ai-micro-api-admin/app:/app/app:ro
+      # アップロードファイルへのアクセス（Docling処理用）
+      - ../ai-micro-api-admin/uploads:/app/uploads:ro
+      # ドキュメント処理画像の共有ボリューム
+      - document_processing:/tmp/document_processing
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - ai-micro-network
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  celery-beat:
+    build: .
+    container_name: ai-micro-celery-beat
+    command: celery -A app.core.celery_app beat --loglevel=info
+    environment:
+      # Celery
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/2
+
+      # Environment
+      - PYTHONPATH=/app
+    volumes:
+      - ../ai-micro-api-admin/app:/app/app:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - ai-micro-network
+    depends_on:
+      - celery-worker
+
+networks:
+  ai-micro-network:
+    external: true
+
+volumes:
+  document_processing:
+    driver: local

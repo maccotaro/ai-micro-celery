@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   celery-worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.mac
     container_name: ai-micro-celery-worker
     command: celery -A app.core.celery_app worker --loglevel=info --pool=threads --concurrency=4
     environment:
@@ -17,14 +19,16 @@ services:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - EMBEDDING_MODEL=bge-m3:567m
 
-      # GPU環境用の環境変数（ai-micro-api-adminと同様）
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - CUDA_HOME=/usr/local/cuda
-      - LD_LIBRARY_PATH=/usr/lib/wsl/lib:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+      # M3 Mac環境最適化（GPU関連環境変数なし）
+      - PYTHONUNBUFFERED=1
+      - TORCH_COMPILE=0
+      - MKL_NUM_THREADS=2
+      - OMP_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
 
       # Environment
       - PYTHONPATH=/app
+
     volumes:
       # ai-micro-api-admin のコードを共有
       - ../ai-micro-api-admin/app:/app/app:ro
@@ -32,15 +36,13 @@ services:
       - ../ai-micro-api-admin/uploads:/app/uploads:ro
       # ドキュメント処理画像の共有ボリューム
       - document_processing:/tmp/document_processing
+
+    # GPU関連設定なし（CPUモード）
     deploy:
       resources:
         limits:
-          memory: 12G
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+          memory: 8G
+
     mem_swappiness: 0
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -54,7 +56,9 @@ services:
       retries: 3
 
   celery-beat:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.mac
     container_name: ai-micro-celery-beat
     command: celery -A app.core.celery_app beat --loglevel=info
     environment:
@@ -64,8 +68,10 @@ services:
 
       # Environment
       - PYTHONPATH=/app
+
     volumes:
       - ../ai-micro-api-admin/app:/app/app:ro
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

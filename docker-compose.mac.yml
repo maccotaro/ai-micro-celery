@@ -15,9 +15,10 @@ services:
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/2
 
-      # Ollama (Embedding生成用)
+      # Ollama (Embedding生成用 + チャットモデル)
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - EMBEDDING_MODEL=bge-m3:567m
+      - OLLAMA_CHAT_MODEL=gemma3:4b
 
       # M3 Mac環境最適化（GPU関連環境変数なし）
       - PYTHONUNBUFFERED=1
@@ -62,9 +63,17 @@ services:
     container_name: ai-micro-celery-beat
     command: celery -A app.core.celery_app beat --loglevel=info
     environment:
+      # Database
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@host.docker.internal:5432/admindb
+
       # Celery
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/2
+
+      # Ollama (Embedding生成用 + チャットモデル)
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - EMBEDDING_MODEL=bge-m3:567m
+      - OLLAMA_CHAT_MODEL=gemma3:4b
 
       # Environment
       - PYTHONPATH=/app

@@ -15,7 +15,13 @@ services:
 
       # Ollama (Embedding生成用)
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_CHAT_MODEL=gemma2:9b
       - EMBEDDING_MODEL=bge-m3:567m
+
+      # Neo4j (GraphRAG)
+      - NEO4J_URI=bolt://host.docker.internal:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-e03ac48d4e1264ead1a0106faff45e8f}
 
       # GPU環境用の環境変数（ai-micro-api-adminと同様）
       - NVIDIA_VISIBLE_DEVICES=all
@@ -58,9 +64,22 @@ services:
     container_name: ai-micro-celery-beat
     command: celery -A app.core.celery_app beat --loglevel=info
     environment:
+      # Database
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@host.docker.internal:5432/admindb
+
       # Celery
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-cfb4602f86707acf2a264bac18456bdafb4c9acd11e6cc1d89f606d1e2dc679f}@host.docker.internal:6379/2
+
+      # Ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_CHAT_MODEL=gemma2:9b
+      - EMBEDDING_MODEL=bge-m3:567m
+
+      # Neo4j (GraphRAG)
+      - NEO4J_URI=bolt://host.docker.internal:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-e03ac48d4e1264ead1a0106faff45e8f}
 
       # Environment
       - PYTHONPATH=/app

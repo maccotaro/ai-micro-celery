@@ -11,6 +11,9 @@ asyncpg==0.29.0
 sqlalchemy==2.0.23
 alembic==1.13.0
 
+# Neo4j (GraphRAG)
+neo4j>=5.0.0
+
 # FastAPI dependencies (共有コード用)
 fastapi==0.109.0
 pydantic==2.7.0
